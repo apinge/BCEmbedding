@@ -54,7 +54,7 @@ git clone https://github.com/apinge/BCEmbedding.git
 cd BCEmbedding
 python setup.py develop
 python test_rerank_ov.py # openvino version
-python test_rerankPpt.py # compared with torch
+python test_rerank_pt.py # compared with torch
 
 ```
 
