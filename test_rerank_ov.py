@@ -61,7 +61,7 @@ passages = docs
 sentence_pairs = [[query, passage] for passage in passages]
 
 # init reranker model
-model = RerankerModel(use_ov = True, model_name_or_path="maidalun1020/bce-reranker-base_v1", ov_model_path = "./bce-reranker-base_v1-ov")
+model = RerankerModel(use_ov = True, model_name_or_path="maidalun1020/bce-reranker-base_v1", ov_model_path = "./bce-reranker-base_v1-ov", ov_device = "GPU")
 
 # method 0: calculate scores of sentence pairs
 scores = model.ov_compute_score(sentence_pairs)

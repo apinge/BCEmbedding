@@ -31,6 +31,7 @@ class RerankerModel:
             ov_model_path: str=None,
             use_fp16: bool=False,
             device: str=None,
+            ov_device: str='CPU',
             **kwargs
         ):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, **kwargs)
@@ -69,8 +70,8 @@ class RerankerModel:
         if use_ov:
             core = ov.Core()
             model_path = Path.Path(ov_model_path) / "openvino_model.xml"
-            self.compiled_model = core.compile_model(model_path,"CPU")
-            print("OpenVINO model loaded successfully.")
+            self.compiled_model = core.compile_model(model_path, ov_device)
+            print(f"=== OpenVINO model loaded on {ov_device} cessfully. ===")
     
     def compute_score(
             self, 
