@@ -20,11 +20,15 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from BCEmbedding.utils import logger_wrapper
 logger = logger_wrapper('BCEmbedding.models.RerankerModel')
 
+import openvino as ov
+import pathlib as Path
 
 class RerankerModel:
     def __init__(
             self,
+            use_ov = False,
             model_name_or_path: str='maidalun1020/bce-reranker-base_v1',
+            ov_model_path: str=None,
             use_fp16: bool=False,
             device: str=None,
             **kwargs
@@ -62,6 +66,11 @@ class RerankerModel:
         # for advanced preproc of tokenization
         self.max_length = kwargs.get('max_length', 512)
         self.overlap_tokens = kwargs.get('overlap_tokens', 80)
+        if use_ov:
+            core = ov.Core()
+            model_path = Path.Path(ov_model_path) / "openvino_model.xml"
+            self.compiled_model = core.compile_model(model_path,"CPU")
+            print("OpenVINO model loaded successfully.")
     
     def compute_score(
             self, 
@@ -91,6 +100,43 @@ class RerankerModel:
                         )
                 inputs_on_device = {k: v.to(self.device) for k, v in inputs.items()}
                 scores = self.model(**inputs_on_device, return_dict=True).logits.view(-1,).float()
+                scores = torch.sigmoid(scores)
+                scores_collection.extend(scores.cpu().numpy().tolist())
+        
+        if len(scores_collection) == 1:
+            return scores_collection[0]
+        return scores_collection
+    def ov_compute_score(
+            self, 
+            sentence_pairs: Union[List[Tuple[str, str]], Tuple[str, str]], 
+            batch_size: int = 256,
+            max_length: int = 512,
+            enable_tqdm: bool=True,
+            **kwargs
+        ):
+        if self.num_gpus > 1:
+            batch_size = batch_size * self.num_gpus
+        
+        assert isinstance(sentence_pairs, list)
+        if isinstance(sentence_pairs[0], str):
+            sentence_pairs = [sentence_pairs]
+        
+        with torch.no_grad():
+            scores_collection = []
+            for sentence_id in tqdm(range(0, len(sentence_pairs), batch_size), desc='Calculate scores', disable=not enable_tqdm):
+                sentence_pairs_batch = sentence_pairs[sentence_id:sentence_id+batch_size]
+                inputs = self.tokenizer(
+                            sentence_pairs_batch, 
+                            padding=True,
+                            truncation=True,
+                            max_length=max_length,
+                            return_tensors="pt"
+                        )
+                inputs_on_device = {k: v.to(self.device) for k, v in inputs.items()}
+                ov_scores = self.compiled_model(inputs_on_device)[0].reshape(-1)
+                scores = torch.from_numpy(ov_scores).to(self.device).float()
+                #scores = self.model(**inputs_on_device, return_dict=True).logits.view(-1,).float()
+
                 scores = torch.sigmoid(scores)
                 scores_collection.extend(scores.cpu().numpy().tolist())
         
