@@ -7,8 +7,7 @@
  * @LastEditors: shenlei
 -->
 
-<h1 align="center">BCEmbedding: Bilingual and Crosslingual Embedding for RAG</h1>
-
+<h1 align="center">BCEmbedding: Bilingual and Crosslingual Embedding for RAG based on OpenVINO</h1>
 <div align="center">
     <a href="./LICENSE">
       <img src="https://img.shields.io/badge/license-Apache--2.0-yellow">
@@ -26,6 +25,42 @@
   |
   <a href="./README_zh.md" target="_Self">简体中文</a>
 </p>
+
+# 1. Set Environment
+```
+conda env create bce-rerank python=3.11
+conda activate bce-rerank
+pip install --upgrade --upgrade-strategy eager "optimum[openvino]"
+python -m pip install git+https://github.com/huggingface/optimum-intel.git
+pip install sentence_transformers
+```
+
+# 2. Convert Model
+## Convert ReRanker 
+```bash
+optimum-cli export openvino --model maidalun1020/bce-reranker-base_v1  --trust-remote-code  --task text-classification --weight-format fp16 bce-reranker-base_v1-ov
+
+```
+## Convert Embedding
+
+```bash
+optimum-cli export openvino --model maidalun1020/bce-embedding-base_v1  --trust-remote-code  --task feature-extraction --weight-format fp16 bce-embedding-base_v1-ov --library sentence_transformers
+ 
+```
+
+# 3. How to Run
+```
+git clone https://github.com/apinge/BCEmbedding.git
+cd BCEmbedding
+python setup.py develop
+python test_rerank_ov.py # openvino version
+python test_rerankPpt.py # compared with torch
+
+```
+
+<details>
+  <summary>Click here to expand/collapse content</summary>
+  <ul>
 
 <details open="open">
 <summary>Click to Open Contents</summary>
@@ -603,3 +638,5 @@ If you use `BCEmbedding` in your research or project, please feel free to cite a
 [LLama Index](https://github.com/run-llama/llama_index) | [LlamaIndex Blog](https://blog.llamaindex.ai/boosting-rag-picking-the-best-embedding-reranker-models-42d079022e83)
 
 [HuixiangDou](https://github.com/internlm/huixiangdou)
+  </ul>
+</details>
